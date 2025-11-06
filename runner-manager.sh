@@ -782,7 +782,10 @@ get_latest_version() {
         if echo "$api_response" | grep -q '"message"'; then
             return 1
         fi
-        latest_version=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | sed 's/^v//')
+        latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$latest_tag" ]; then
+            latest_version=$(echo "$latest_tag" | sed 's/^v//')
+        fi
     elif [ "$tool" = "wget" ]; then
         api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
         if [ $? -ne 0 ] || [ -z "$api_response" ]; then
@@ -792,7 +795,10 @@ get_latest_version() {
         if echo "$api_response" | grep -q '"message"'; then
             return 1
         fi
-        latest_version=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | sed 's/^v//')
+        latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$latest_tag" ]; then
+            latest_version=$(echo "$latest_tag" | sed 's/^v//')
+        fi
     fi
     
     if [ -n "$latest_version" ]; then
