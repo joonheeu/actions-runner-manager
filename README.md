@@ -42,10 +42,15 @@ curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/
 The installation script will:
 - Download `runner-manager.sh` to `~/.local/bin/`
 - Make it executable
+- Create a symlink `runner-manager` (without .sh extension) for convenience
 - Optionally add it to your PATH
 
 After installation, you can run the script from anywhere:
 ```bash
+# Using the symlink (recommended, no extension)
+runner-manager
+
+# Or using the full filename
 runner-manager.sh
 ```
 
@@ -97,19 +102,19 @@ chmod +x runner-manager.sh
 
 ```bash
 # Show version
-runner-manager.sh --version
+runner-manager --version
 # or
-runner-manager.sh -v
+runner-manager -v
 
 # Update to latest version
-runner-manager.sh --update
+runner-manager --update
 # or
-runner-manager.sh -u
+runner-manager -u
 
 # Show help
-runner-manager.sh --help
+runner-manager --help
 # or
-runner-manager.sh -h
+runner-manager -h
 ```
 
 ### Automatic Update Check
@@ -121,7 +126,7 @@ The script automatically checks for updates when you run it. If a new version is
 To manually check and update:
 
 ```bash
-runner-manager.sh --update
+runner-manager --update
 ```
 
 This will:
@@ -164,7 +169,7 @@ After running the script, an interactive menu will be displayed:
 ### Create and Start a Runner
 
 ```bash
-./runner-manager.sh
+runner-manager
 # Select "Add New Runner" from the menu
 # Enter required information and confirm
 ```
@@ -172,14 +177,14 @@ After running the script, an interactive menu will be displayed:
 ### Check Runner Status
 
 ```bash
-./runner-manager.sh
+runner-manager
 # Select Runner → → (select info action) → Enter
 ```
 
 ### View Runner Logs
 
 ```bash
-./runner-manager.sh
+runner-manager
 # Select Runner → → → (select logs action) → Enter
 ```
 

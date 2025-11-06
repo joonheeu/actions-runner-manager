@@ -104,6 +104,19 @@ main() {
     chmod +x "$INSTALL_PATH"
     echo -e "${GREEN}✓ Permissions set${NC}"
     
+    # Create symlink without .sh extension for convenience
+    local symlink_name="runner-manager"
+    local symlink_path="${INSTALL_DIR}/${symlink_name}"
+    
+    if [ -L "$symlink_path" ]; then
+        # Remove existing symlink if it exists
+        rm "$symlink_path"
+    fi
+    
+    echo -e "${GREEN}Creating symlink: ${symlink_name}${NC}"
+    ln -s "$INSTALL_PATH" "$symlink_path"
+    echo -e "${GREEN}✓ Symlink created${NC}"
+    
     # Check if install directory is in PATH
     if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
         echo ""
@@ -143,12 +156,13 @@ main() {
     echo -e "${GREEN}  Installation Complete!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
-    echo -e "Run the script with: ${CYAN}${SCRIPT_NAME}${NC}"
+    echo -e "Run the script with: ${CYAN}${symlink_name}${NC} or ${CYAN}${SCRIPT_NAME}${NC}"
     echo ""
     
     # Check if script is in PATH
-    if command -v "$SCRIPT_NAME" &> /dev/null; then
+    if command -v "$symlink_name" &> /dev/null || command -v "$SCRIPT_NAME" &> /dev/null; then
         echo -e "${GREEN}✓ Script is available in PATH${NC}"
+        echo -e "${GREEN}  You can use: ${CYAN}${symlink_name}${NC} or ${CYAN}${SCRIPT_NAME}${NC}"
     else
         echo -e "${YELLOW}Note: You may need to restart your terminal or run:${NC}"
         echo -e "${CYAN}  export PATH=\"\${PATH}:${INSTALL_DIR}\"${NC}"
