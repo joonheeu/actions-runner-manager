@@ -85,9 +85,26 @@ main() {
         mkdir -p "$INSTALL_DIR"
     fi
     
-    # Download script
-    SCRIPT_URL="${REPO_URL}/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${SCRIPT_NAME}"
-    echo -e "${GREEN}Downloading ${SCRIPT_NAME}...${NC}"
+    # Get latest release tag
+    echo -e "${CYAN}Checking for latest version...${NC}"
+    local tool=$(detect_download_tool)
+    local latest_tag=""
+    
+    if [ "$tool" = "curl" ]; then
+        latest_tag=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$')
+    elif [ "$tool" = "wget" ]; then
+        latest_tag=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$')
+    fi
+    
+    # Use latest tag if available, otherwise fall back to main branch
+    if [ -n "$latest_tag" ]; then
+        SCRIPT_URL="${REPO_URL}/${REPO_OWNER}/${REPO_NAME}/${latest_tag}/${SCRIPT_NAME}"
+        echo -e "${GREEN}Downloading ${SCRIPT_NAME} from ${latest_tag}...${NC}"
+    else
+        SCRIPT_URL="${REPO_URL}/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${SCRIPT_NAME}"
+        echo -e "${YELLOW}Could not determine latest version, using main branch${NC}"
+        echo -e "${GREEN}Downloading ${SCRIPT_NAME}...${NC}"
+    fi
     
     if download_file "$SCRIPT_URL" "$INSTALL_PATH"; then
         echo -e "${GREEN}✓ Downloaded successfully${NC}"
