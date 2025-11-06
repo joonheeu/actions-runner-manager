@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # GitHub Actions Runner Management Script
-# Version: 1.0.2
-# Usage: ./runner-manager
+# Version: 1.0.3
+# Usage: ./runner-manager.sh
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
 # set -e removed (prevent immediate exit on error)
@@ -10,14 +10,14 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_IMAGE="myoung34/github-runner:latest"
 CONTAINER_PREFIX="runners_"
-SCRIPT_VERSION="1.0.2"
+SCRIPT_VERSION="1.0.3"
 
 # Update configuration
 REPO_OWNER="joonheeu"
 REPO_NAME="actions-runner-manager"
 REPO_URL="https://raw.githubusercontent.com"
 BRANCH="main"
-SCRIPT_NAME="runner-manager"
+SCRIPT_NAME="runner-manager.sh"
 
 # Color output
 RED='\033[0;31m'
@@ -819,7 +819,7 @@ check_for_updates() {
         if [[ "$UPDATE_CONFIRM" =~ ^[Yy]$ ]]; then
             update_script "$latest_version"
         else
-            echo -e "${YELLOW}Update skipped. You can update later by running: ${CYAN}runner-manager --update${NC}"
+            echo -e "${YELLOW}Update skipped. You can update later by running: ${CYAN}runner-manager.sh --update${NC}"
         fi
         return 1
     else
@@ -910,12 +910,12 @@ main() {
         fi
         exit 0
     elif [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
-        echo "runner-manager v${SCRIPT_VERSION}"
+        echo "runner-manager.sh v${SCRIPT_VERSION}"
         exit 0
     elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
         echo "GitHub Actions Runner Manager"
         echo ""
-        echo "Usage: runner-manager [OPTIONS]"
+        echo "Usage: runner-manager.sh [OPTIONS]"
         echo ""
         echo "Options:"
         echo "  --update, -u    Update to the latest version"

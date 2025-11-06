@@ -33,38 +33,38 @@ Install using wget or curl:
 
 ```bash
 # Using wget
-wget -qO- https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
 
 # Or using curl
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
 ```
 
 The installation script will:
-- Download `runner-manager` to `~/.local/bin/`
+- Download `runner-manager.sh` to `~/.local/bin/`
 - Make it executable
 - Optionally add it to your PATH
 
 After installation, you can run the script from anywhere:
 ```bash
-runner-manager
+runner-manager.sh
 ```
 
 ### Manual Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/joonheeu/actions-runner-manager.git
-cd actions-runner-manager
+git clone https://github.com/joonheeu/actions-runner-manager.sh.git
+cd actions-runner-manager.sh
 ```
 
 2. Make the script executable:
 ```bash
-chmod +x runner-manager
+chmod +x runner-manager.sh
 ```
 
 3. Run directly:
 ```bash
-./runner-manager
+./runner-manager.sh
 ```
 
 ### Direct Download
@@ -73,14 +73,14 @@ You can also download the script directly (curl recommended):
 
 ```bash
 # Using curl (Recommended - works on most systems)
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/runner-manager -o runner-manager
-chmod +x runner-manager
-./runner-manager
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/runner-manager.sh -o runner-manager.sh
+chmod +x runner-manager.sh
+./runner-manager.sh
 
 # Or using wget (if HTTPS support is available)
-wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/runner-manager
-chmod +x runner-manager
-./runner-manager
+wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/runner-manager.sh
+chmod +x runner-manager.sh
+./runner-manager.sh
 ```
 
 > **Note**: If wget shows "HTTPS support not compiled in" error, use curl instead or use the installation script above.
@@ -90,26 +90,26 @@ chmod +x runner-manager
 ### Basic Execution
 
 ```bash
-./runner-manager
+./runner-manager.sh
 ```
 
 ### Command Line Options
 
 ```bash
 # Show version
-runner-manager --version
+runner-manager.sh --version
 # or
-runner-manager -v
+runner-manager.sh -v
 
 # Update to latest version
-runner-manager --update
+runner-manager.sh --update
 # or
-runner-manager -u
+runner-manager.sh -u
 
 # Show help
-runner-manager --help
+runner-manager.sh --help
 # or
-runner-manager -h
+runner-manager.sh -h
 ```
 
 ### Automatic Update Check
@@ -121,7 +121,7 @@ The script automatically checks for updates when you run it. If a new version is
 To manually check and update:
 
 ```bash
-runner-manager --update
+runner-manager.sh --update
 ```
 
 This will:
@@ -164,7 +164,7 @@ After running the script, an interactive menu will be displayed:
 ### Create and Start a Runner
 
 ```bash
-./runner-manager
+./runner-manager.sh
 # Select "Add New Runner" from the menu
 # Enter required information and confirm
 ```
@@ -172,22 +172,22 @@ After running the script, an interactive menu will be displayed:
 ### Check Runner Status
 
 ```bash
-./runner-manager
+./runner-manager.sh
 # Select Runner → → (select info action) → Enter
 ```
 
 ### View Runner Logs
 
 ```bash
-./runner-manager
+./runner-manager.sh
 # Select Runner → → → (select logs action) → Enter
 ```
 
 ## Project Structure
 
 ```
-actions-runner-manager/
-├── runner-manager                    # Main script
+actions-runner-manager.sh/
+├── runner-manager.sh                    # Main script
 ├── install.sh                     # Installation script
 ├── README.md                      # This file
 ├── LICENSE                        # License
@@ -244,14 +244,14 @@ If you encounter "HTTPS support not compiled in" error when using wget:
 
 **Solution 1: Use curl instead (Recommended)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
 ```
 
 **Solution 2: Use the installation script (Recommended)**
 The installation script automatically detects and uses curl if available:
 ```bash
 # This will use curl if wget doesn't support HTTPS
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
 ```
 
 **Solution 3: Install curl**
