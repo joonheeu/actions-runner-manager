@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub Actions Runner Management Script
-# Version: 1.0.5
+# Version: 1.0.6
 # Usage: ./runner-manager.sh
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
@@ -10,7 +10,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_IMAGE="myoung34/github-runner:latest"
 CONTAINER_PREFIX="runners_"
-SCRIPT_VERSION="1.0.5"
+SCRIPT_VERSION="1.0.6"
 
 # Update configuration
 REPO_OWNER="joonheeu"
@@ -188,11 +188,22 @@ display_runner_list() {
                 action_text="${actions[$action_idx]}"
             fi
             
-            printf "${CYAN}▶ %-2d${NC} %-30s [${status_color}%-10s${NC}] [${YELLOW}%s${NC}]\n" \
-                $((index + 1)) "$runner" "$status_text" "$action_text"
+            # Format action if exists
+            if [ -n "$action_text" ]; then
+                action_text="[ ${YELLOW}${action_text}${NC} ]"
+            fi
+            
+            # Format status with spaces: [ Running ], [ Stopped ]
+            local status_formatted="[ ${status_color}${status_text}${NC} ]"
+            
+            printf "${CYAN}▶ %-2d${NC} %-30s %b %b\n" \
+                $((index + 1)) "$runner" "$status_formatted" "$action_text"
         else
-            printf "  %-2d %-30s [${status_color}%-10s${NC}]\n" \
-                $((index + 1)) "$runner" "$status_text"
+            # Format status with spaces for non-selected items
+            local status_formatted="[ ${status_color}${status_text}${NC} ]"
+            
+            printf "  %-2d %-30s %b\n" \
+                $((index + 1)) "$runner" "$status_formatted"
         fi
         
         ((index++))
@@ -206,7 +217,11 @@ display_runner_list() {
     fi
     
     echo ""
-    echo -e "${YELLOW}Arrow keys: Navigate/Select action  Enter/Space: Execute  q: Quit${NC}"
+    echo -e "${YELLOW}Controls:${NC}"
+    printf "  ${CYAN}%-5s${NC} : %s\n" "⬆️ ,⬇️ " "Navigate runner list"
+    printf "  ${CYAN}%-5s${NC} : %s\n" "⬅️ ,➡️ " "Select action (start, stop, restart, logs, info, delete)"
+    printf "  ${CYAN}%-5s${NC} : %s\n" "Enter" "Execute selected action"
+    printf "  ${CYAN}%-5s${NC} : %s\n" "Q" "Quit"
 }
 
 # Runner list screen main loop
