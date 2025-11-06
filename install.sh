@@ -156,16 +156,25 @@ main() {
     echo -e "${GREEN}  Installation Complete!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
-    echo -e "Run the script with: ${CYAN}${symlink_name}${NC} or ${CYAN}${SCRIPT_NAME}${NC}"
-    echo ""
     
     # Check if script is in PATH
     if command -v "$symlink_name" &> /dev/null || command -v "$SCRIPT_NAME" &> /dev/null; then
         echo -e "${GREEN}✓ Script is available in PATH${NC}"
-        echo -e "${GREEN}  You can use: ${CYAN}${symlink_name}${NC} or ${CYAN}${SCRIPT_NAME}${NC}"
+        echo ""
+        echo -e "${BOLD}Usage examples:${NC}"
+        echo -e "  ${CYAN}${symlink_name}${NC}                    # Start interactive menu"
+        echo -e "  ${CYAN}${symlink_name} --update${NC}          # Update to latest version"
+        echo -e "  ${CYAN}${symlink_name} --version${NC}        # Show version"
+        echo -e "  ${CYAN}${symlink_name} --help${NC}            # Show help"
     else
         echo -e "${YELLOW}Note: You may need to restart your terminal or run:${NC}"
         echo -e "${CYAN}  export PATH=\"\${PATH}:${INSTALL_DIR}\"${NC}"
+        echo ""
+        echo -e "${BOLD}Usage examples:${NC}"
+        echo -e "  ${CYAN}${symlink_name}${NC}                    # Start interactive menu"
+        echo -e "  ${CYAN}${symlink_name} --update${NC}          # Update to latest version"
+        echo -e "  ${CYAN}${symlink_name} --version${NC}        # Show version"
+        echo -e "  ${CYAN}${symlink_name} --help${NC}            # Show help"
     fi
     echo ""
 }
