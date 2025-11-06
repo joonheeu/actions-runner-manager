@@ -774,25 +774,25 @@ get_latest_version() {
     
     # Try to get latest release tag from GitHub API
     if [ "$tool" = "curl" ]; then
-        api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>&1)
-        if [ $? -ne 0 ]; then
+        api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
+        if [ $? -ne 0 ] || [ -z "$api_response" ]; then
             return 1
         fi
         # Check if response contains error message
         if echo "$api_response" | grep -q '"message"'; then
             return 1
         fi
-        latest_version=$(echo "$api_response" | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
+        latest_version=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | sed 's/^v//')
     elif [ "$tool" = "wget" ]; then
-        api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>&1)
-        if [ $? -ne 0 ]; then
+        api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
+        if [ $? -ne 0 ] || [ -z "$api_response" ]; then
             return 1
         fi
         # Check if response contains error message
         if echo "$api_response" | grep -q '"message"'; then
             return 1
         fi
-        latest_version=$(echo "$api_response" | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
+        latest_version=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | sed 's/^v//')
     fi
     
     if [ -n "$latest_version" ]; then
