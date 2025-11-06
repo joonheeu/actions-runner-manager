@@ -68,19 +68,21 @@ chmod +x manager.sh
 
 ### Direct Download
 
-You can also download the script directly:
+You can also download the script directly (curl recommended):
 
 ```bash
-# Using wget
-wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/manager.sh
-chmod +x manager.sh
-./manager.sh
-
-# Or using curl
+# Using curl (Recommended - works on most systems)
 curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/manager.sh -o manager.sh
 chmod +x manager.sh
 ./manager.sh
+
+# Or using wget (if HTTPS support is available)
+wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/manager.sh
+chmod +x manager.sh
+./manager.sh
 ```
+
+> **Note**: If wget shows "HTTPS support not compiled in" error, use curl instead or use the installation script above.
 
 ## Usage
 
@@ -196,6 +198,45 @@ sudo yum install less
 
 # macOS
 brew install less
+```
+
+### wget HTTPS Support Error
+
+If you encounter "HTTPS support not compiled in" error when using wget:
+
+**Solution 1: Use curl instead (Recommended)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
+```
+
+**Solution 2: Use the installation script (Recommended)**
+The installation script automatically detects and uses curl if available:
+```bash
+# This will use curl if wget doesn't support HTTPS
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
+```
+
+**Solution 3: Install curl**
+```bash
+# Ubuntu/Debian
+sudo apt-get install curl
+
+# CentOS/RHEL
+sudo yum install curl
+
+# Alpine
+sudo apk add curl
+```
+
+**Solution 4: Update wget with HTTPS support**
+```bash
+# Ubuntu/Debian
+sudo apt-get install wget
+
+# CentOS/RHEL
+sudo yum install wget
+
+# Or compile wget with OpenSSL support
 ```
 
 ## Contributing
