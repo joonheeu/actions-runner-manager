@@ -1,0 +1,738 @@
+#!/bin/bash
+
+# GitHub Actions Runner Management Script
+# Version: 1.0.0
+# Usage: ./manager.sh
+# Description: Interactive script to manage GitHub Actions Runners using Docker
+
+# set -e removed (prevent immediate exit on error)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNNER_IMAGE="myoung34/github-runner:latest"
+CONTAINER_PREFIX="runners_"
+SCRIPT_VERSION="1.0.0"
+
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+# Terminal settings save/restore
+save_terminal() {
+    stty_save=$(stty -g)
+}
+
+restore_terminal() {
+    stty "$stty_save"
+}
+
+# Read arrow keys
+read_key() {
+    while true; do
+        local key
+        # Read single character without timeout
+        if IFS= read -rsn1 key 2>/dev/null; then
+            if [[ $key == $'\x1b' ]]; then
+                # Process ESC sequence
+                if read -rsn1 -t 0.1 key 2>/dev/null; then
+                    if [[ $key == '[' ]]; then
+                        if read -rsn1 -t 0.1 key 2>/dev/null; then
+                            case $key in
+                                'A') echo "UP"; return ;;
+                                'B') echo "DOWN"; return ;;
+                                'C') echo "RIGHT"; return ;;
+                                'D') echo "LEFT"; return ;;
+                            esac
+                        fi
+                    fi
+                fi
+            elif [[ $key == $'\n' ]] || [[ $key == $'\r' ]] || [[ $key == '' ]]; then
+                # Detect Enter key (newline, carriage return, or empty)
+                echo "ENTER"
+                return
+            elif [[ $key == ' ' ]]; then
+                # Space key
+                echo "ENTER"
+                return
+            elif [[ $key == $'\x7f' ]] || [[ $key == $'\b' ]]; then
+                echo "BACKSPACE"
+                return
+            elif [[ $key == $'\x03' ]]; then
+                # Ctrl+C
+                echo "QUIT"
+                return
+            elif [[ $key == $'\x1a' ]]; then
+                # Ctrl+Z
+                echo "QUIT"
+                return
+            elif [[ $key == 'q' ]] || [[ $key == 'Q' ]]; then
+                echo "QUIT"
+                return
+            fi
+        else
+            # Retry after short wait on read failure
+            sleep 0.01
+        fi
+    done
+}
+
+# Get all runners list (including stopped)
+get_all_runners() {
+    local runners=()
+    while IFS= read -r container_name; do
+        if [ -n "$container_name" ]; then
+            # Remove prefix from container name
+            if [[ "$container_name" == "${CONTAINER_PREFIX}"* ]]; then
+                local service_name="${container_name#${CONTAINER_PREFIX}}"
+                runners+=("$service_name")
+            fi
+        fi
+    done < <(docker ps -a --filter "name=${CONTAINER_PREFIX}" --format "{{.Names}}" 2>/dev/null | grep "^${CONTAINER_PREFIX}" || true)
+    
+    printf '%s\n' "${runners[@]}"
+}
+
+# Get runner status
+get_runner_status() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if docker ps --filter "name=${container_name}" --format "{{.Names}}" 2>/dev/null | grep -q "^${container_name}$"; then
+        echo "RUNNING"
+    elif docker ps -a --filter "name=${container_name}" --format "{{.Names}}" 2>/dev/null | grep -q "^${container_name}$"; then
+        echo "STOPPED"
+    else
+        echo "NOT_FOUND"
+    fi
+}
+
+# Get available actions for runner
+get_runner_actions() {
+    local service_name=$1
+    local status=$(get_runner_status "$service_name")
+    
+    case "$status" in
+        RUNNING)
+            echo "info stop restart logs delete"
+            ;;
+        STOPPED)
+            echo "info start delete"
+            ;;
+        *)
+            echo "info delete"
+            ;;
+    esac
+}
+
+# Display runner list screen
+display_runner_list() {
+    local selected_index=$1
+    local action_index=$2
+    local all_runners=($(get_all_runners | sort -u))
+    local total_items=$((${#all_runners[@]} + 1))  # +1 for "Add New Runner"
+    
+    clear
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}  GitHub Actions Runner Management${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    
+    # Header
+    printf "${BOLD}%-4s %-30s %-12s %-20s${NC}\n" "No" "Runner Name" "Status" "Action"
+    echo "------------------------------------------------------------"
+    
+    # Runner list
+    local index=0
+    for runner in "${all_runners[@]}"; do
+        local status=$(get_runner_status "$runner")
+        local status_color=""
+        local status_text=""
+        
+        case "$status" in
+            RUNNING)
+                status_color="$GREEN"
+                status_text="Running"
+                ;;
+            STOPPED)
+                status_color="$RED"
+                status_text="Stopped"
+                ;;
+            *)
+                status_color="$YELLOW"
+                status_text="Unknown"
+                ;;
+        esac
+        
+        # Display selected item
+        if [ $index -eq $selected_index ]; then
+            local actions=($(get_runner_actions "$runner"))
+            local action_text=""
+            if [ ${#actions[@]} -gt 0 ]; then
+                local action_idx=$(($action_index % ${#actions[@]}))
+                action_text="${actions[$action_idx]}"
+            fi
+            
+            printf "${CYAN}▶ %-2d${NC} %-30s [${status_color}%-10s${NC}] [${YELLOW}%s${NC}]\n" \
+                $((index + 1)) "$runner" "$status_text" "$action_text"
+        else
+            printf "  %-2d %-30s [${status_color}%-10s${NC}]\n" \
+                $((index + 1)) "$runner" "$status_text"
+        fi
+        
+        ((index++))
+    done
+    
+    # Add new runner option
+    if [ $selected_index -eq ${#all_runners[@]} ]; then
+        printf "${CYAN}▶ %-2s${NC} ${BOLD}%-30s${NC}\n" "+" "Add New Runner"
+    else
+        printf "  %-2s ${BOLD}%-30s${NC}\n" "+" "Add New Runner"
+    fi
+    
+    echo ""
+    echo -e "${YELLOW}Arrow keys: Navigate/Select action  Enter/Space: Execute  q: Quit${NC}"
+}
+
+# Runner list screen main loop
+runner_list_screen() {
+    local all_runners=($(get_all_runners | sort -u))
+    local total_items=$((${#all_runners[@]} + 1))
+    local selected_index=0
+    local action_index=0
+    
+    # Terminal settings
+    save_terminal 2>/dev/null || true
+    # Use cbreak mode for better key detection (Enter, Space, etc.)
+    stty -echo cbreak 2>/dev/null || stty -echo -icanon min 1 time 0 2>/dev/null || true
+    
+    while true; do
+        display_runner_list $selected_index $action_index
+        
+        local key=$(read_key)
+        
+        case "$key" in
+            UP)
+                if [ $selected_index -gt 0 ]; then
+                    ((selected_index--))
+                else
+                    # Move to opposite end when reaching the end
+                    selected_index=$((total_items - 1))
+                fi
+                action_index=0
+                ;;
+            DOWN)
+                if [ $selected_index -lt $((total_items - 1)) ]; then
+                    ((selected_index++))
+                else
+                    # Move to opposite end when reaching the end
+                    selected_index=0
+                fi
+                action_index=0
+                ;;
+            RIGHT)
+                if [ $selected_index -lt ${#all_runners[@]} ]; then
+                    local runner="${all_runners[$selected_index]}"
+                    local actions=($(get_runner_actions "$runner"))
+                    if [ ${#actions[@]} -gt 0 ]; then
+                        ((action_index++))
+                        # Cycle to beginning when reaching the end
+                        if [ $action_index -ge ${#actions[@]} ]; then
+                            action_index=0
+                        fi
+                    fi
+                fi
+                ;;
+            LEFT)
+                if [ $selected_index -lt ${#all_runners[@]} ]; then
+                    local runner="${all_runners[$selected_index]}"
+                    local actions=($(get_runner_actions "$runner"))
+                    if [ ${#actions[@]} -gt 0 ]; then
+                        ((action_index--))
+                        # Cycle to end when less than 0
+                        if [ $action_index -lt 0 ]; then
+                            action_index=$((${#actions[@]} - 1))
+                        fi
+                    fi
+                fi
+                ;;
+            ENTER)
+                if [ $selected_index -lt ${#all_runners[@]} ]; then
+                    # Runner selected
+                    local runner="${all_runners[$selected_index]}"
+                    local actions=($(get_runner_actions "$runner"))
+                    if [ ${#actions[@]} -gt 0 ]; then
+                        local action_idx=$(($action_index % ${#actions[@]}))
+                        local action="${actions[$action_idx]}"
+                        restore_terminal 2>/dev/null || true
+                        execute_action "$runner" "$action"
+                        save_terminal 2>/dev/null || true
+                        stty -echo cbreak 2>/dev/null || stty -echo -icanon min 1 time 0 2>/dev/null || true
+                    fi
+                else
+                    # Add new runner
+                    restore_terminal 2>/dev/null || true
+                    add_runner
+                    save_terminal 2>/dev/null || true
+                    stty -echo cbreak 2>/dev/null || stty -echo -icanon min 1 time 0 2>/dev/null || true
+                    # Refresh list
+                    all_runners=($(get_all_runners | sort -u))
+                    total_items=$((${#all_runners[@]} + 1))
+                    if [ $selected_index -ge $total_items ]; then
+                        selected_index=$((total_items - 1))
+                    fi
+                fi
+                ;;
+            QUIT)
+                restore_terminal 2>/dev/null || true
+                echo -e "\n${YELLOW}Exiting...${NC}"
+                exit 0
+                ;;
+        esac
+    done
+}
+
+# Execute action
+execute_action() {
+    local service_name=$1
+    local action=$2
+    
+    case "$action" in
+        start)
+            start_runner "$service_name"
+            ;;
+        stop)
+            stop_runner "$service_name"
+            ;;
+        restart)
+            restart_runner "$service_name"
+            ;;
+        logs)
+            view_logs "$service_name"
+            ;;
+        info)
+            show_runner_info "$service_name"
+            # show_runner_info already has "Press Enter to continue", so skip here
+            return 0
+            ;;
+        delete)
+            remove_runner "$service_name"
+            ;;
+    esac
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Add runner
+add_runner() {
+    clear
+    echo -e "${GREEN}Add New Runner${NC}"
+    echo "=================================="
+    echo ""
+    
+    # Input kebab-case service name
+    while true; do
+        read -p "Service name (kebab-case, e.g., my-service): " SERVICE_NAME
+        
+        # Validate kebab-case (only lowercase, hyphen, numbers allowed)
+        if [[ ! "$SERVICE_NAME" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            echo -e "${RED}Error: Service name must be in kebab-case format (lowercase, numbers, hyphens only)${NC}"
+            continue
+        fi
+        
+        # Check for duplicates
+        local container_name="${CONTAINER_PREFIX}${SERVICE_NAME}"
+        if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" 2>/dev/null | grep -q "^${container_name}$"; then
+            echo -e "${RED}Error: Runner '$SERVICE_NAME' already exists.${NC}"
+            read -p "Overwrite? (y/N): " OVERWRITE
+            if [[ "$OVERWRITE" =~ ^[Yy]$ ]]; then
+                # Delete existing container
+                docker rm -f "$container_name" 2>/dev/null || true
+                break
+            else
+                continue
+            fi
+        fi
+        
+        break
+    done
+    
+    echo ""
+    echo -e "${GREEN}Enter environment variables:${NC}"
+    
+    # Input RUNNER_NAME
+    read -p "RUNNER_NAME (default: ${SERVICE_NAME}-runner-1): " RUNNER_NAME
+    RUNNER_NAME=${RUNNER_NAME:-${SERVICE_NAME}-runner-1}
+    
+    # Input GitHub Organization
+    while true; do
+        read -p "GitHub Organization (e.g., organization-name or username): " GITHUB_ORG
+        if [ -z "$GITHUB_ORG" ]; then
+            echo -e "${RED}Error: GitHub Organization is required.${NC}"
+            continue
+        fi
+        # Validate org name (only lowercase, numbers, hyphens allowed)
+        if [[ ! "$GITHUB_ORG" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+            echo -e "${RED}Error: GitHub Organization name format is invalid.${NC}"
+            continue
+        fi
+        break
+    done
+    
+    # Input GitHub Repository
+    while true; do
+        read -p "GitHub Repository (e.g., repository-name): " GITHUB_REPO
+        if [ -z "$GITHUB_REPO" ]; then
+            echo -e "${RED}Error: GitHub Repository is required.${NC}"
+            continue
+        fi
+        # Validate repo name (only lowercase, numbers, hyphens, underscores, dots allowed)
+        if [[ ! "$GITHUB_REPO" =~ ^[a-z0-9._-]+$ ]]; then
+            echo -e "${RED}Error: GitHub Repository name format is invalid.${NC}"
+            continue
+        fi
+        break
+    done
+    
+    # Generate REPO_URL
+    REPO_URL="https://github.com/${GITHUB_ORG}/${GITHUB_REPO}"
+    
+    # Input RUNNER_TOKEN
+    while true; do
+        echo -e "${YELLOW}⚠️  Security Warning: RUNNER_TOKEN is sensitive information.${NC}"
+        echo -e "${YELLOW}   Make sure you're in a secure environment.${NC}"
+        read -p "RUNNER_TOKEN: " RUNNER_TOKEN
+        if [ -z "$RUNNER_TOKEN" ]; then
+            echo -e "${RED}Error: RUNNER_TOKEN is required.${NC}"
+            continue
+        fi
+        break
+    done
+    
+    # Input RUNNER_LABELS
+    read -p "RUNNER_LABELS (default: self-hosted,linux,x64,docker,${SERVICE_NAME}): " RUNNER_LABELS
+    RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,linux,x64,docker,${SERVICE_NAME}}
+    
+    # Input RUNNER_WORKDIR
+    read -p "RUNNER_WORKDIR (default: /tmp/github-runner): " RUNNER_WORKDIR
+    RUNNER_WORKDIR=${RUNNER_WORKDIR:-/tmp/github-runner}
+    
+    echo ""
+    echo -e "${GREEN}Entered information:${NC}"
+    echo "  Service name: $SERVICE_NAME"
+    echo "  RUNNER_NAME: $RUNNER_NAME"
+    echo "  GitHub Organization: $GITHUB_ORG"
+    echo "  GitHub Repository: $GITHUB_REPO"
+    echo "  REPO_URL: $REPO_URL"
+    echo "  RUNNER_TOKEN: ${RUNNER_TOKEN:0:10}..."
+    echo "  RUNNER_LABELS: $RUNNER_LABELS"
+    echo "  RUNNER_WORKDIR: $RUNNER_WORKDIR"
+    echo ""
+    
+    read -p "Create runner with this information? (y/N): " CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Cancelled.${NC}"
+        return 0
+    fi
+    
+    # Run Docker container
+    local container_name="${CONTAINER_PREFIX}${SERVICE_NAME}"
+    echo -e "${GREEN}Starting runner container: $container_name${NC}"
+    
+    docker run -d \
+        --name "$container_name" \
+        --restart unless-stopped \
+        -e "RUNNER_NAME=$RUNNER_NAME" \
+        -e "REPO_URL=$REPO_URL" \
+        -e "RUNNER_TOKEN=$RUNNER_TOKEN" \
+        -e "RUNNER_LABELS=$RUNNER_LABELS" \
+        -e "RUNNER_WORKDIR=$RUNNER_WORKDIR" \
+        -v "${SERVICE_NAME}-runner:/actions-runner/_work" \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        "$RUNNER_IMAGE"
+    
+    echo -e "${GREEN}✓ Runner created and started successfully!${NC}"
+}
+
+# Start runner
+start_runner() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if [ "$(get_runner_status "$service_name")" = "NOT_FOUND" ]; then
+        echo -e "${RED}Error: Runner not found.${NC}"
+        return 1
+    fi
+    
+    echo -e "${GREEN}Starting runner: $service_name${NC}"
+    docker start "$container_name"
+    echo -e "${GREEN}✓ Runner started.${NC}"
+}
+
+# Stop runner
+stop_runner() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if [ "$(get_runner_status "$service_name")" = "NOT_FOUND" ]; then
+        echo -e "${RED}Error: Runner not found.${NC}"
+        return 1
+    fi
+    
+    echo -e "${YELLOW}Stopping runner: $service_name${NC}"
+    docker stop "$container_name"
+    echo -e "${GREEN}✓ Runner stopped.${NC}"
+}
+
+# Restart runner
+restart_runner() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if [ "$(get_runner_status "$service_name")" = "NOT_FOUND" ]; then
+        echo -e "${RED}Error: Runner not found.${NC}"
+        return 1
+    fi
+    
+    echo -e "${YELLOW}Restarting runner: $service_name${NC}"
+    docker restart "$container_name"
+    echo -e "${GREEN}✓ Runner restarted.${NC}"
+}
+
+# Show runner information
+show_runner_info() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if [ "$(get_runner_status "$service_name")" = "NOT_FOUND" ]; then
+        echo -e "${RED}Error: Runner not found.${NC}"
+        return 1
+    fi
+    
+    clear
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}  Runner Information: ${CYAN}$service_name${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    
+    # Get container status
+    local status=$(get_runner_status "$service_name")
+    local status_color=""
+    local status_text=""
+    
+    case "$status" in
+        RUNNING)
+            status_color="$GREEN"
+            status_text="Running"
+            ;;
+        STOPPED)
+            status_color="$RED"
+            status_text="Stopped"
+            ;;
+        *)
+            status_color="$YELLOW"
+            status_text="Unknown"
+            ;;
+    esac
+    
+    echo -e "${BOLD}Status:${NC} [${status_color}${status_text}${NC}]"
+    echo ""
+    
+    # Get container information using docker inspect
+    if docker inspect "$container_name" &>/dev/null; then
+        echo -e "${BOLD}Container Information:${NC}"
+        echo "------------------------------------------------------------"
+        
+        # Container ID
+        local container_id=$(docker inspect --format='{{.Id}}' "$container_name" 2>/dev/null | cut -c1-12)
+        echo -e "  Container ID: ${CYAN}${container_id}${NC}"
+        
+        # Image
+        local image=$(docker inspect --format='{{.Config.Image}}' "$container_name" 2>/dev/null)
+        echo -e "  Image: ${CYAN}${image}${NC}"
+        
+        # Created
+        local created=$(docker inspect --format='{{.Created}}' "$container_name" 2>/dev/null)
+        echo -e "  Created: ${CYAN}${created}${NC}"
+        
+        # Restart policy
+        local restart=$(docker inspect --format='{{.HostConfig.RestartPolicy.Name}}' "$container_name" 2>/dev/null)
+        echo -e "  Restart Policy: ${CYAN}${restart}${NC}"
+        
+        echo ""
+        echo -e "${BOLD}Environment Variables:${NC}"
+        echo "------------------------------------------------------------"
+        
+        # Get environment variables from container
+        local env_vars=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' "$container_name" 2>/dev/null | grep -E "^(RUNNER_|REPO_)" || true)
+        
+        if [ -n "$env_vars" ]; then
+            while IFS= read -r env_var; do
+                if [ -n "$env_var" ]; then
+                    local key=$(echo "$env_var" | cut -d'=' -f1)
+                    local value=$(echo "$env_var" | cut -d'=' -f2-)
+                    # Mask sensitive information
+                    if [ "$key" = "RUNNER_TOKEN" ]; then
+                        value="${value:0:10}..."
+                    fi
+                    echo -e "  ${CYAN}${key}${NC}=${value}"
+                fi
+            done <<< "$env_vars"
+        else
+            echo -e "  ${YELLOW}No environment variables found${NC}"
+        fi
+        
+        echo ""
+        echo -e "${BOLD}Volumes:${NC}"
+        echo "------------------------------------------------------------"
+        
+        # Get volumes
+        local volumes=$(docker inspect --format='{{range .Mounts}}{{println .Name}}{{end}}' "$container_name" 2>/dev/null | grep -v "^$" || true)
+        if [ -n "$volumes" ]; then
+            while IFS= read -r volume; do
+                if [ -n "$volume" ]; then
+                    echo -e "  ${CYAN}${volume}${NC}"
+                fi
+            done <<< "$volumes"
+        else
+            echo -e "  ${YELLOW}No volumes found${NC}"
+        fi
+        
+        echo ""
+        echo -e "${BOLD}Network:${NC}"
+        echo "------------------------------------------------------------"
+        
+        # Get network information
+        local network=$(docker inspect --format='{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{end}}' "$container_name" 2>/dev/null || echo "default")
+        echo -e "  Network: ${CYAN}${network}${NC}"
+        
+        # Get IP address if running
+        if [ "$status" = "RUNNING" ]; then
+            local ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name" 2>/dev/null || echo "N/A")
+            echo -e "  IP Address: ${CYAN}${ip}${NC}"
+        fi
+    else
+        echo -e "${RED}Error: Could not inspect container${NC}"
+    fi
+    
+    echo ""
+    echo "------------------------------------------------------------"
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# View runner logs
+view_logs() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if [ "$(get_runner_status "$service_name")" = "NOT_FOUND" ]; then
+        echo -e "${RED}Error: Runner not found.${NC}"
+        return 1
+    fi
+    
+    # Get logs and display in less viewer with search capability
+    # Use less with options: -R (raw control chars), -S (chop long lines)
+    # Commands: / (search), n (next), N (previous), F (follow mode), q (quit)
+    # Start in normal mode (not follow mode) so search works immediately
+    docker logs --tail 1000 "$container_name" 2>/dev/null | less -R -S || {
+        # If less is not available, fall back to docker logs -f
+        clear
+        echo -e "${GREEN}Viewing runner logs: $service_name${NC}"
+        echo -e "${YELLOW}Press Ctrl+C to exit logs.${NC}"
+        echo ""
+        docker logs -f "$container_name" || true
+    }
+}
+
+# Remove runner
+remove_runner() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    if [ "$(get_runner_status "$service_name")" = "NOT_FOUND" ]; then
+        echo -e "${RED}Error: Runner not found.${NC}"
+        return 1
+    fi
+    
+    echo -e "${RED}Warning: Deleting runner will remove container and volume.${NC}"
+    read -p "Are you sure you want to delete? (y/N): " confirm
+    
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Cancelled.${NC}"
+        return 0
+    fi
+    
+    echo -e "${RED}Deleting runner: $service_name${NC}"
+    docker stop "$container_name" 2>/dev/null || true
+    docker rm -f "$container_name" 2>/dev/null || true
+    docker volume rm "${service_name}-runner" 2>/dev/null || true
+    echo -e "${GREEN}✓ Runner deleted.${NC}"
+}
+
+# Check if Docker is installed and running
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        echo -e "${RED}Error: Docker is not installed.${NC}"
+        echo -e "${YELLOW}Please install Docker to use this script.${NC}"
+        echo ""
+        echo -e "${GREEN}Installation instructions:${NC}"
+        echo -e "  - Visit: ${CYAN}https://docs.docker.com/get-docker/${NC}"
+        echo ""
+        exit 1
+    fi
+    
+    # Check if Docker daemon is running
+    if ! docker info &> /dev/null; then
+        echo -e "${RED}Error: Docker daemon is not running.${NC}"
+        echo -e "${YELLOW}Please start Docker and try again.${NC}"
+        echo ""
+        echo -e "${GREEN}To start Docker:${NC}"
+        echo -e "  - Linux:   ${CYAN}sudo systemctl start docker${NC}"
+        echo -e "  - macOS:   ${CYAN}Open Docker Desktop application${NC}"
+        echo -e "  - Windows: ${CYAN}Start Docker Desktop application${NC}"
+        echo ""
+        exit 1
+    fi
+}
+
+# Check if less is installed
+check_less_installed() {
+    if ! command -v less &> /dev/null; then
+        echo -e "${YELLOW}Warning: 'less' is not installed.${NC}"
+        echo -e "${YELLOW}The log viewer feature requires 'less' to be installed.${NC}"
+        echo ""
+        echo -e "${GREEN}To install 'less', please run one of the following commands:${NC}"
+        echo -e "  - Ubuntu/Debian: ${CYAN}sudo apt-get install less${NC}"
+        echo -e "  - CentOS/RHEL:   ${CYAN}sudo yum install less${NC}"
+        echo -e "  - Alpine:        ${CYAN}sudo apk add less${NC}"
+        echo -e "  - OpenWrt:       ${CYAN}opkg install less${NC}"
+        echo -e "  - macOS:         ${CYAN}brew install less${NC}"
+        echo ""
+        echo -e "${YELLOW}The script will continue, but log viewing will use fallback mode.${NC}"
+        echo ""
+        read -p "Press Enter to continue..."
+    fi
+}
+
+# Main function
+main() {
+    # Check Docker installation and daemon status
+    check_docker
+    
+    # Check if less is installed
+    check_less_installed
+    
+    # Restore terminal on exit (handle Ctrl+C, Ctrl+Z, etc.)
+    trap 'restore_terminal 2>/dev/null || true; exit 0' EXIT INT TERM TSTP
+    
+    # Allow execution even if runner list is empty
+    runner_list_screen
+}
+
+# Execute script
+main
