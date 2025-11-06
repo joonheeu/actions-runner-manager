@@ -2,7 +2,7 @@
 
 # GitHub Actions Runner Manager - Installation Script
 # Version: 1.0.0
-# This script downloads and installs the manager.sh script
+# This script downloads and installs the runner-manager script
 
 # set -e removed to allow better error handling
 
@@ -20,7 +20,7 @@ REPO_URL="https://raw.githubusercontent.com"
 REPO_OWNER="joonheeu"
 REPO_NAME="actions-runner-manager"
 BRANCH="main"
-SCRIPT_NAME="manager.sh"
+SCRIPT_NAME="runner-manager"
 INSTALL_DIR="${HOME}/.local/bin"
 INSTALL_PATH="${INSTALL_DIR}/${SCRIPT_NAME}"
 

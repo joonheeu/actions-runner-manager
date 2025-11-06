@@ -39,13 +39,13 @@ curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/mai
 ```
 
 The installation script will:
-- Download `manager.sh` to `~/.local/bin/`
+- Download `runner-manager` to `~/.local/bin/`
 - Make it executable
 - Optionally add it to your PATH
 
 After installation, you can run the script from anywhere:
 ```bash
-manager.sh
+runner-manager
 ```
 
 ### Manual Installation
@@ -58,12 +58,12 @@ cd actions-runner-manager
 
 2. Make the script executable:
 ```bash
-chmod +x manager.sh
+chmod +x runner-manager
 ```
 
 3. Run directly:
 ```bash
-./manager.sh
+./runner-manager
 ```
 
 ### Direct Download
@@ -72,14 +72,14 @@ You can also download the script directly (curl recommended):
 
 ```bash
 # Using curl (Recommended - works on most systems)
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/manager.sh -o manager.sh
-chmod +x manager.sh
-./manager.sh
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/runner-manager -o runner-manager
+chmod +x runner-manager
+./runner-manager
 
 # Or using wget (if HTTPS support is available)
-wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/manager.sh
-chmod +x manager.sh
-./manager.sh
+wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/runner-manager
+chmod +x runner-manager
+./runner-manager
 ```
 
 > **Note**: If wget shows "HTTPS support not compiled in" error, use curl instead or use the installation script above.
@@ -89,7 +89,7 @@ chmod +x manager.sh
 ### Basic Execution
 
 ```bash
-./manager.sh
+./runner-manager
 ```
 
 ### Interface Guide
@@ -126,7 +126,7 @@ After running the script, an interactive menu will be displayed:
 ### Create and Start a Runner
 
 ```bash
-./manager.sh
+./runner-manager
 # Select "Add New Runner" from the menu
 # Enter required information and confirm
 ```
@@ -134,14 +134,14 @@ After running the script, an interactive menu will be displayed:
 ### Check Runner Status
 
 ```bash
-./manager.sh
+./runner-manager
 # Select Runner → → (select info action) → Enter
 ```
 
 ### View Runner Logs
 
 ```bash
-./manager.sh
+./runner-manager
 # Select Runner → → → (select logs action) → Enter
 ```
 
@@ -149,7 +149,7 @@ After running the script, an interactive menu will be displayed:
 
 ```
 actions-runner-manager/
-├── manager.sh                    # Main script
+├── runner-manager                    # Main script
 ├── install.sh                     # Installation script
 ├── README.md                      # This file
 ├── LICENSE                        # License

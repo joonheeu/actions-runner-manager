@@ -2,7 +2,7 @@
 
 # GitHub Actions Runner Management Script
 # Version: 1.0.0
-# Usage: ./manager.sh
+# Usage: ./runner-manager
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
 # set -e removed (prevent immediate exit on error)
