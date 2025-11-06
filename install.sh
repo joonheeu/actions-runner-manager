@@ -74,11 +74,9 @@ main() {
     # Check if script already exists
     if [ -f "$INSTALL_PATH" ]; then
         echo -e "${YELLOW}Warning: ${SCRIPT_NAME} already exists at ${INSTALL_PATH}${NC}"
-        read -p "Overwrite? (y/N): " OVERWRITE
-        if [[ ! "$OVERWRITE" =~ ^[Yy]$ ]]; then
-            echo -e "${YELLOW}Installation cancelled.${NC}"
-            exit 0
-        fi
+        echo -e "${CYAN}Removing existing file...${NC}"
+        rm -f "$INSTALL_PATH"
+        echo -e "${GREEN}✓ Existing file removed${NC}"
     fi
     
     # Create install directory if it doesn't exist

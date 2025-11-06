@@ -10,6 +10,7 @@ An interactive Bash script to easily manage GitHub Actions Runners using Docker 
 - 📊 **Status Monitoring**: Check Runner status and view logs
 - 🏷️ **Label Management**: Organize and manage Runners with custom labels
 - 🔄 **Auto Update**: Automatic update check and easy manual update via `--update` flag
+- 🎨 **Modern UI**: Clean interface with emoji icons and improved formatting
 
 ## Requirements
 
@@ -29,23 +30,25 @@ If Docker is not installed, please refer to the [official Docker documentation](
 
 ### Quick Install (Recommended)
 
-Install using wget or curl:
+Install using curl or wget:
 
 ```bash
-# Using wget
-wget -qO- https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
+# Using curl (recommended)
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
 
-# Or using curl
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
+# Using wget
+wget -qO- https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
 ```
 
 The installation script will:
 - Download `runner-manager.sh` to `~/.local/bin/`
 - Make it executable
 - Create a symlink `runner-manager` (without .sh extension) for convenience
+- Automatically remove existing installation if present
 - Optionally add it to your PATH
 
 After installation, you can run the script from anywhere:
+
 ```bash
 # Using the symlink (recommended, no extension)
 runner-manager
@@ -58,8 +61,8 @@ runner-manager.sh
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/joonheeu/actions-runner-manager.sh.git
-cd actions-runner-manager.sh
+git clone https://github.com/joonheeu/actions-runner-manager.git
+cd actions-runner-manager
 ```
 
 2. Make the script executable:
@@ -74,16 +77,16 @@ chmod +x runner-manager.sh
 
 ### Direct Download
 
-You can also download the script directly (curl recommended):
+You can also download the script directly:
 
 ```bash
 # Using curl (Recommended - works on most systems)
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/runner-manager.sh -o runner-manager.sh
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/runner-manager.sh -o runner-manager.sh
 chmod +x runner-manager.sh
 ./runner-manager.sh
 
 # Or using wget (if HTTPS support is available)
-wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/runner-manager.sh
+wget https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/runner-manager.sh
 chmod +x runner-manager.sh
 ./runner-manager.sh
 ```
@@ -95,7 +98,7 @@ chmod +x runner-manager.sh
 ### Basic Execution
 
 ```bash
-./runner-manager.sh
+runner-manager
 ```
 
 ### Command Line Options
@@ -139,10 +142,11 @@ This will:
 
 After running the script, an interactive menu will be displayed:
 
-- **↑/↓**: Navigate through the Runner list
-- **←/→**: Change actions for the selected Runner (start, stop, restart, logs, info, delete)
-- **Enter/Space**: Execute the selected action
-- **q**: Quit the program
+**Controls:**
+- ⬆️ ⬇️ : Navigate runner list
+- ⬅️ ➡️ : Select action (start, stop, restart, logs, info, delete)
+- Enter : Execute selected action
+- Q : Quit
 
 ### Adding a Runner
 
@@ -191,16 +195,16 @@ runner-manager
 ## Project Structure
 
 ```
-actions-runner-manager.sh/
-├── runner-manager.sh                    # Main script
-├── install.sh                     # Installation script
-├── README.md                      # This file
-├── LICENSE                        # License
-├── SECURITY.md                    # Security policy
-├── CONTRIBUTING.md                # Contributing guidelines
-├── .gitignore                     # Git ignore file
+actions-runner-manager/
+├── runner-manager.sh          # Main script
+├── install.sh                 # Installation script
+├── README.md                  # This file
+├── LICENSE                    # License
+├── SECURITY.md                # Security policy
+├── CONTRIBUTING.md            # Contributing guidelines
+├── .gitignore                 # Git ignore file
 └── .github/
-    ├── ISSUE_TEMPLATE/            # Issue templates
+    ├── ISSUE_TEMPLATE/        # Issue templates
     │   ├── bug_report.md
     │   └── feature_request.md
     └── pull_request_template.md   # PR template
@@ -249,14 +253,14 @@ If you encounter "HTTPS support not compiled in" error when using wget:
 
 **Solution 1: Use curl instead (Recommended)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
 ```
 
 **Solution 2: Use the installation script (Recommended)**
 The installation script automatically detects and uses curl if available:
 ```bash
 # This will use curl if wget doesn't support HTTPS
-curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager.sh/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/joonheeu/actions-runner-manager/main/install.sh | bash
 ```
 
 **Solution 3: Install curl**
