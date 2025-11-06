@@ -89,11 +89,18 @@ main() {
     echo -e "${CYAN}Checking for latest version...${NC}"
     local tool=$(detect_download_tool)
     local latest_tag=""
+    local api_response=""
     
     if [ "$tool" = "curl" ]; then
-        latest_tag=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$')
+        api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$api_response" ]; then
+            latest_tag=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+        fi
     elif [ "$tool" = "wget" ]; then
-        latest_tag=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$')
+        api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$api_response" ]; then
+            latest_tag=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+        fi
     fi
     
     # Use latest tag if available, otherwise fall back to main branch
@@ -166,11 +173,22 @@ main() {
         fi
     fi
     
+    # Get installed version
+    local installed_version=""
+    if [ -f "$INSTALL_PATH" ]; then
+        installed_version=$(grep -o 'SCRIPT_VERSION="[^"]*"' "$INSTALL_PATH" 2>/dev/null | sed 's/SCRIPT_VERSION="//' | sed 's/"//')
+    fi
+    
     echo ""
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}  Installation Complete!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
+    
+    if [ -n "$installed_version" ]; then
+        echo -e "${GREEN}Installed version: ${BOLD}v${installed_version}${NC}"
+        echo ""
+    fi
     
     # Check if script is in PATH
     if command -v "$symlink_name" &> /dev/null || command -v "$SCRIPT_NAME" &> /dev/null; then
