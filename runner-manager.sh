@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub Actions Runner Management Script
-# Version: 1.0.7
+# Version: 1.0.8
 # Usage: ./runner-manager.sh
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
@@ -10,7 +10,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_IMAGE="myoung34/github-runner:latest"
 CONTAINER_PREFIX="runners_"
-SCRIPT_VERSION="1.0.7"
+SCRIPT_VERSION="1.0.8"
 
 # Update configuration
 REPO_OWNER="joonheeu"
@@ -766,6 +766,7 @@ detect_download_tool() {
 get_latest_version() {
     local tool=$(detect_download_tool)
     local latest_version=""
+    local api_response=""
     
     if [ -z "$tool" ]; then
         return 1
@@ -773,9 +774,25 @@ get_latest_version() {
     
     # Try to get latest release tag from GitHub API
     if [ "$tool" = "curl" ]; then
-        latest_version=$(curl -fsSL "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
+        api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>&1)
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+        # Check if response contains error message
+        if echo "$api_response" | grep -q '"message"'; then
+            return 1
+        fi
+        latest_version=$(echo "$api_response" | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
     elif [ "$tool" = "wget" ]; then
-        latest_version=$(wget -qO- "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
+        api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: runner-manager/${SCRIPT_VERSION}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>&1)
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+        # Check if response contains error message
+        if echo "$api_response" | grep -q '"message"'; then
+            return 1
+        fi
+        latest_version=$(echo "$api_response" | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
     fi
     
     if [ -n "$latest_version" ]; then
@@ -920,17 +937,24 @@ update_script() {
 main() {
     # Handle command line arguments
     if [ "$1" = "--update" ] || [ "$1" = "-u" ]; then
+        echo -e "${CYAN}Checking for updates...${NC}"
         local latest_version=$(get_latest_version)
-        if [ -n "$latest_version" ]; then
+        if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
             compare_versions "$SCRIPT_VERSION" "$latest_version"
             local result=$?
             if [ $result -eq 1 ]; then
+                echo -e "${YELLOW}New version available: v${latest_version} (current: v${SCRIPT_VERSION})${NC}"
                 update_script "$latest_version"
-            else
+            elif [ $result -eq 0 ]; then
                 echo -e "${GREEN}You are already using the latest version (v${SCRIPT_VERSION})${NC}"
+            else
+                echo -e "${GREEN}You are using a newer version (v${SCRIPT_VERSION}) than the latest release (v${latest_version})${NC}"
             fi
         else
             echo -e "${RED}Error: Could not check for updates${NC}"
+            echo -e "${YELLOW}Please check your internet connection and try again.${NC}"
+            echo -e "${YELLOW}You can also manually download the latest version from:${NC}"
+            echo -e "${CYAN}https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest${NC}"
             exit 1
         fi
         exit 0
