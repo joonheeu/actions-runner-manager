@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub Actions Runner Management Script
-# Version: 1.0.6
+# Version: 1.0.7
 # Usage: ./runner-manager.sh
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
@@ -10,7 +10,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_IMAGE="myoung34/github-runner:latest"
 CONTAINER_PREFIX="runners_"
-SCRIPT_VERSION="1.0.6"
+SCRIPT_VERSION="1.0.7"
 
 # Update configuration
 REPO_OWNER="joonheeu"
