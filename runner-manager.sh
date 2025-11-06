@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub Actions Runner Management Script
-# Version: 1.0.10
+# Version: 1.0.11
 # Usage: ./runner-manager.sh
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
@@ -10,7 +10,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_IMAGE="myoung34/github-runner:latest"
 CONTAINER_PREFIX="runners_"
-SCRIPT_VERSION="1.0.10"
+SCRIPT_VERSION="1.0.11"
 
 # Update configuration
 REPO_OWNER="joonheeu"
@@ -122,6 +122,14 @@ get_runner_status() {
     fi
 }
 
+# Get container ID
+get_container_id() {
+    local service_name=$1
+    local container_name="${CONTAINER_PREFIX}${service_name}"
+    
+    docker ps -a --filter "name=${container_name}" --format "{{.ID}}" 2>/dev/null | head -1
+}
+
 # Get available actions for runner
 get_runner_actions() {
     local service_name=$1
@@ -154,15 +162,23 @@ display_runner_list() {
     echo ""
     
     # Header
-    printf "${BOLD}%-4s %-30s %-12s %-20s${NC}\n" "No" "Runner Name" "Status" "Action"
-    echo "------------------------------------------------------------"
+    printf "${BOLD}%-12s   %-30s %-12s %-20s${NC}\n" "Container ID" "Runner Name" "Status" "Action"
+    echo "----------------------------------------------------------------"
     
     # Runner list
     local index=0
     for runner in "${all_runners[@]}"; do
         local status=$(get_runner_status "$runner")
+        local container_id=$(get_container_id "$runner")
         local status_color=""
         local status_text=""
+        
+        # Shorten container ID to 12 characters (first 12 chars)
+        if [ -n "$container_id" ]; then
+            container_id="${container_id:0:12}"
+        else
+            container_id="N/A"
+        fi
         
         case "$status" in
             RUNNING)
@@ -196,14 +212,15 @@ display_runner_list() {
             # Format status with spaces: [ Running ], [ Stopped ]
             local status_formatted="[ ${status_color}${status_text}${NC} ]"
             
-            printf "${CYAN}▶ %-2d${NC} %-30s %b %b\n" \
-                $((index + 1)) "$runner" "$status_formatted" "$action_text"
+            # Highlight runner name with color
+            printf "%-12s   ${CYAN}%-30s${NC} %b %b\n" \
+                "$container_id" "$runner" "$status_formatted" "$action_text"
         else
             # Format status with spaces for non-selected items
             local status_formatted="[ ${status_color}${status_text}${NC} ]"
             
-            printf "  %-2d %-30s %b\n" \
-                $((index + 1)) "$runner" "$status_formatted"
+            printf "%-12s   %-30s %b\n" \
+                "$container_id" "$runner" "$status_formatted"
         fi
         
         ((index++))
@@ -211,9 +228,9 @@ display_runner_list() {
     
     # Add new runner option
     if [ $selected_index -eq ${#all_runners[@]} ]; then
-        printf "${CYAN}▶ %-2s${NC} ${BOLD}%-30s${NC}\n" "+" "Add New Runner"
+        printf "%-12s   ${CYAN}%-30s${NC}\n" "" "Add New Runner"
     else
-        printf "  %-2s ${BOLD}%-30s${NC}\n" "+" "Add New Runner"
+        printf "%-12s   %-30s\n" "" "Add New Runner"
     fi
     
     echo ""
