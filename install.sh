@@ -94,12 +94,18 @@ main() {
     if [ "$tool" = "curl" ]; then
         api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$api_response" ]; then
-            latest_tag=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+            # Check if response contains error message
+            if ! echo "$api_response" | grep -q '"message"'; then
+                latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+            fi
         fi
     elif [ "$tool" = "wget" ]; then
         api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$api_response" ]; then
-            latest_tag=$(echo "$api_response" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+            # Check if response contains error message
+            if ! echo "$api_response" | grep -q '"message"'; then
+                latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+            fi
         fi
     fi
     
