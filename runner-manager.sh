@@ -42,13 +42,18 @@ read_key() {
     while true; do
         local key
         # Read single character without timeout
+        # On macOS, raw mode (-icanon) allows read -rsn1 to work properly
         if IFS= read -rsn1 key 2>/dev/null; then
             if [[ $key == $'\x1b' ]]; then
-                # Process ESC sequence
-                if read -rsn1 -t 0.1 key 2>/dev/null; then
-                    if [[ $key == '[' ]]; then
-                        if read -rsn1 -t 0.1 key 2>/dev/null; then
-                            case $key in
+                # Process ESC sequence (arrow keys)
+                # Read next character immediately (no timeout needed in raw mode)
+                local next_key
+                if IFS= read -rsn1 next_key 2>/dev/null; then
+                    if [[ $next_key == '[' ]]; then
+                        # Read the direction character
+                        local dir_key
+                        if IFS= read -rsn1 dir_key 2>/dev/null; then
+                            case $dir_key in
                                 'A') echo "UP"; return ;;
                                 'B') echo "DOWN"; return ;;
                                 'C') echo "RIGHT"; return ;;
@@ -213,8 +218,11 @@ runner_list_screen() {
     
     # Terminal settings
     save_terminal 2>/dev/null || true
-    # Use cbreak mode for better key detection (Enter, Space, etc.)
-    stty -echo cbreak 2>/dev/null || stty -echo -icanon min 1 time 0 2>/dev/null || true
+    # Use raw mode for better arrow key detection on macOS
+    # Disable echo and canonical mode, set minimum input to 0
+    stty -echo -icanon min 0 time 0 2>/dev/null || true
+    # Also try cbreak mode as fallback
+    stty cbreak 2>/dev/null || true
     
     while true; do
         display_runner_list $selected_index $action_index
@@ -277,14 +285,16 @@ runner_list_screen() {
                         restore_terminal 2>/dev/null || true
                         execute_action "$runner" "$action"
                         save_terminal 2>/dev/null || true
-                        stty -echo cbreak 2>/dev/null || stty -echo -icanon min 1 time 0 2>/dev/null || true
+                        stty -echo -icanon min 0 time 0 2>/dev/null || true
+                        stty cbreak 2>/dev/null || true
                     fi
                 else
                     # Add new runner
                     restore_terminal 2>/dev/null || true
                     add_runner
                     save_terminal 2>/dev/null || true
-                    stty -echo cbreak 2>/dev/null || stty -echo -icanon min 1 time 0 2>/dev/null || true
+                    stty -echo -icanon min 0 time 0 2>/dev/null || true
+                    stty cbreak 2>/dev/null || true
                     # Refresh list
                     all_runners=($(get_all_runners | sort -u))
                     total_items=$((${#all_runners[@]} + 1))
