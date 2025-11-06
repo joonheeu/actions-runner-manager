@@ -98,11 +98,11 @@ main() {
         if [ $curl_exit -eq 0 ] && [ -n "$api_response" ]; then
             # Check if response contains error message
             if ! echo "$api_response" | grep -q '"message"'; then
-                # Try multiple parsing methods for compatibility
-                latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
-                # Fallback: try simpler pattern
+                # Try simpler pattern first (more compatible)
+                latest_tag=$(echo "$api_response" | grep -o '"tag_name":"[^"]*"' | cut -d'"' -f4)
+                # Fallback: try pattern with spaces
                 if [ -z "$latest_tag" ]; then
-                    latest_tag=$(echo "$api_response" | grep -o '"tag_name":"[^"]*"' | cut -d'"' -f4)
+                    latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
                 fi
             fi
         fi
@@ -112,11 +112,11 @@ main() {
         if [ $wget_exit -eq 0 ] && [ -n "$api_response" ]; then
             # Check if response contains error message
             if ! echo "$api_response" | grep -q '"message"'; then
-                # Try multiple parsing methods for compatibility
-                latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
-                # Fallback: try simpler pattern
+                # Try simpler pattern first (more compatible)
+                latest_tag=$(echo "$api_response" | grep -o '"tag_name":"[^"]*"' | cut -d'"' -f4)
+                # Fallback: try pattern with spaces
                 if [ -z "$latest_tag" ]; then
-                    latest_tag=$(echo "$api_response" | grep -o '"tag_name":"[^"]*"' | cut -d'"' -f4)
+                    latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
                 fi
             fi
         fi
