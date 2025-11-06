@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub Actions Runner Management Script
-# Version: 1.0.0
+# Version: 1.0.1
 # Usage: ./runner-manager
 # Description: Interactive script to manage GitHub Actions Runners using Docker
 
@@ -10,7 +10,14 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_IMAGE="myoung34/github-runner:latest"
 CONTAINER_PREFIX="runners_"
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.0.1"
+
+# Update configuration
+REPO_OWNER="joonheeu"
+REPO_NAME="actions-runner-manager"
+REPO_URL="https://raw.githubusercontent.com"
+BRANCH="main"
+SCRIPT_NAME="runner-manager"
 
 # Color output
 RED='\033[0;31m'
@@ -719,8 +726,211 @@ check_less_installed() {
     fi
 }
 
+# Detect download tool
+detect_download_tool() {
+    if command -v curl &> /dev/null; then
+        echo "curl"
+    elif command -v wget &> /dev/null; then
+        echo "wget"
+    else
+        echo ""
+    fi
+}
+
+# Get latest version from GitHub releases
+get_latest_version() {
+    local tool=$(detect_download_tool)
+    local latest_version=""
+    
+    if [ -z "$tool" ]; then
+        return 1
+    fi
+    
+    # Try to get latest release tag from GitHub API
+    if [ "$tool" = "curl" ]; then
+        latest_version=$(curl -fsSL "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
+    elif [ "$tool" = "wget" ]; then
+        latest_version=$(wget -qO- "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$' | sed 's/^v//')
+    fi
+    
+    if [ -n "$latest_version" ]; then
+        echo "$latest_version"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Compare version numbers
+# Returns: 0 if versions are equal, 1 if current < latest, 2 if current > latest
+compare_versions() {
+    local current=$1
+    local latest=$2
+    
+    if [ "$current" = "$latest" ]; then
+        return 0
+    fi
+    
+    # Simple version comparison (works for x.y.z format)
+    local current_parts=($(echo "$current" | tr '.' ' '))
+    local latest_parts=($(echo "$latest" | tr '.' ' '))
+    
+    local max_len=${#current_parts[@]}
+    if [ ${#latest_parts[@]} -gt $max_len ]; then
+        max_len=${#latest_parts[@]}
+    fi
+    
+    for ((i=0; i<max_len; i++)); do
+        local current_part=${current_parts[$i]:-0}
+        local latest_part=${latest_parts[$i]:-0}
+        
+        if [ "$current_part" -lt "$latest_part" ]; then
+            return 1
+        elif [ "$current_part" -gt "$latest_part" ]; then
+            return 2
+        fi
+    done
+    
+    return 0
+}
+
+# Check for updates
+check_for_updates() {
+    echo -e "${CYAN}Checking for updates...${NC}"
+    
+    local latest_version=$(get_latest_version)
+    
+    if [ -z "$latest_version" ]; then
+        echo -e "${YELLOW}Could not check for updates. Continuing...${NC}"
+        return 1
+    fi
+    
+    compare_versions "$SCRIPT_VERSION" "$latest_version"
+    local result=$?
+    
+    if [ $result -eq 0 ]; then
+        echo -e "${GREEN}You are using the latest version (v${SCRIPT_VERSION})${NC}"
+        return 0
+    elif [ $result -eq 1 ]; then
+        echo -e "${YELLOW}New version available: v${latest_version} (current: v${SCRIPT_VERSION})${NC}"
+        echo ""
+        read -p "Would you like to update now? (y/N): " UPDATE_CONFIRM
+        
+        if [[ "$UPDATE_CONFIRM" =~ ^[Yy]$ ]]; then
+            update_script "$latest_version"
+        else
+            echo -e "${YELLOW}Update skipped. You can update later by running: ${CYAN}runner-manager --update${NC}"
+        fi
+        return 1
+    else
+        echo -e "${GREEN}You are using a newer version (v${SCRIPT_VERSION}) than the latest release (v${latest_version})${NC}"
+        return 0
+    fi
+}
+
+# Update script
+update_script() {
+    local target_version=$1
+    local tool=$(detect_download_tool)
+    
+    if [ -z "$tool" ]; then
+        echo -e "${RED}Error: Neither curl nor wget is installed. Cannot update.${NC}"
+        return 1
+    fi
+    
+    echo -e "${GREEN}Updating to v${target_version}...${NC}"
+    
+    # Determine script location
+    local script_path="${BASH_SOURCE[0]}"
+    if [ -L "$script_path" ]; then
+        script_path=$(readlink -f "$script_path")
+    fi
+    
+    # Create temporary file
+    local temp_file=$(mktemp)
+    
+    # Download latest version
+    local download_url="${REPO_URL}/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${SCRIPT_NAME}"
+    echo -e "${CYAN}Downloading from: ${download_url}${NC}"
+    
+    if [ "$tool" = "curl" ]; then
+        if ! curl -fsSL "$download_url" -o "$temp_file"; then
+            echo -e "${RED}Error: Failed to download update${NC}"
+            rm -f "$temp_file"
+            return 1
+        fi
+    elif [ "$tool" = "wget" ]; then
+        if ! wget -q "$download_url" -O "$temp_file"; then
+            echo -e "${RED}Error: Failed to download update${NC}"
+            rm -f "$temp_file"
+            return 1
+        fi
+    fi
+    
+    # Verify downloaded file (check if it starts with #!/bin/bash)
+    if [ "$(head -n 1 "$temp_file" 2>/dev/null)" != "#!/bin/bash" ]; then
+        echo -e "${RED}Error: Downloaded file is not a valid script${NC}"
+        rm -f "$temp_file"
+        return 1
+    fi
+    
+    # Backup current script
+    local backup_file="${script_path}.backup"
+    cp "$script_path" "$backup_file"
+    
+    # Replace script
+    mv "$temp_file" "$script_path"
+    chmod +x "$script_path"
+    
+    echo -e "${GREEN}✓ Updated successfully to v${target_version}${NC}"
+    echo -e "${YELLOW}Backup saved to: ${backup_file}${NC}"
+    echo ""
+    echo -e "${GREEN}Please restart the script to use the new version.${NC}"
+    echo ""
+    read -p "Press Enter to exit..."
+    exit 0
+}
+
 # Main function
 main() {
+    # Handle command line arguments
+    if [ "$1" = "--update" ] || [ "$1" = "-u" ]; then
+        local latest_version=$(get_latest_version)
+        if [ -n "$latest_version" ]; then
+            compare_versions "$SCRIPT_VERSION" "$latest_version"
+            local result=$?
+            if [ $result -eq 1 ]; then
+                update_script "$latest_version"
+            else
+                echo -e "${GREEN}You are already using the latest version (v${SCRIPT_VERSION})${NC}"
+            fi
+        else
+            echo -e "${RED}Error: Could not check for updates${NC}"
+            exit 1
+        fi
+        exit 0
+    elif [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
+        echo "runner-manager v${SCRIPT_VERSION}"
+        exit 0
+    elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+        echo "GitHub Actions Runner Manager"
+        echo ""
+        echo "Usage: runner-manager [OPTIONS]"
+        echo ""
+        echo "Options:"
+        echo "  --update, -u    Update to the latest version"
+        echo "  --version, -v   Show version information"
+        echo "  --help, -h      Show this help message"
+        echo ""
+        exit 0
+    fi
+    
+    # Check for updates (non-blocking, runs in background)
+    # Only check if not in update mode
+    if [ -z "$1" ]; then
+        (check_for_updates >/dev/null 2>&1 &)
+    fi
+    
     # Check Docker installation and daemon status
     check_docker
     
@@ -735,4 +945,4 @@ main() {
 }
 
 # Execute script
-main
+main "$@"

@@ -9,6 +9,7 @@ An interactive Bash script to easily manage GitHub Actions Runners using Docker 
 - 🔄 **Lifecycle Management**: Create, start, stop, restart, and delete Runners
 - 📊 **Status Monitoring**: Check Runner status and view logs
 - 🏷️ **Label Management**: Organize and manage Runners with custom labels
+- 🔄 **Auto Update**: Automatic update check and easy manual update via `--update` flag
 
 ## Requirements
 
@@ -91,6 +92,43 @@ chmod +x runner-manager
 ```bash
 ./runner-manager
 ```
+
+### Command Line Options
+
+```bash
+# Show version
+runner-manager --version
+# or
+runner-manager -v
+
+# Update to latest version
+runner-manager --update
+# or
+runner-manager -u
+
+# Show help
+runner-manager --help
+# or
+runner-manager -h
+```
+
+### Automatic Update Check
+
+The script automatically checks for updates when you run it. If a new version is available, you'll be prompted to update.
+
+### Manual Update
+
+To manually check and update:
+
+```bash
+runner-manager --update
+```
+
+This will:
+- Check for the latest version on GitHub
+- Download and install the update if available
+- Create a backup of your current version (`.backup` file)
+- Exit so you can restart with the new version
 
 ### Interface Guide
 
