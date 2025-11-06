@@ -142,11 +142,22 @@ This will:
 
 After running the script, an interactive menu will be displayed:
 
+The runner list shows:
+- **Container ID**: Docker container ID (12 characters) for each runner
+- **Runner Name**: Service name of the runner
+- **Status**: Current status (Running/Stopped) with color coding
+- **Action**: Available actions for the selected runner
+
 **Controls:**
 - ⬆️ ⬇️ : Navigate runner list
 - ⬅️ ➡️ : Select action (start, stop, restart, logs, info, delete)
 - Enter : Execute selected action
 - Q : Quit
+
+**Visual Indicators:**
+- Selected runner name is highlighted in cyan color
+- Running runners show green status
+- Stopped runners show red status
 
 ### Adding a Runner
 
