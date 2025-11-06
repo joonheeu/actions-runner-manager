@@ -90,23 +90,34 @@ main() {
     local tool=$(detect_download_tool)
     local latest_tag=""
     local api_response=""
+    local api_url="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
     
     if [ "$tool" = "curl" ]; then
-        api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
+        api_response=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: install.sh/1.0.0" "$api_url" 2>/dev/null)
         local curl_exit=$?
         if [ $curl_exit -eq 0 ] && [ -n "$api_response" ]; then
             # Check if response contains error message
             if ! echo "$api_response" | grep -q '"message"'; then
+                # Try multiple parsing methods for compatibility
                 latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+                # Fallback: try simpler pattern
+                if [ -z "$latest_tag" ]; then
+                    latest_tag=$(echo "$api_response" | grep -o '"tag_name":"[^"]*"' | cut -d'"' -f4)
+                fi
             fi
         fi
     elif [ "$tool" = "wget" ]; then
-        api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: install.sh/1.0.0" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" 2>/dev/null)
+        api_response=$(wget -qO- --header="Accept: application/vnd.github.v3+json" --header="User-Agent: install.sh/1.0.0" "$api_url" 2>/dev/null)
         local wget_exit=$?
         if [ $wget_exit -eq 0 ] && [ -n "$api_response" ]; then
             # Check if response contains error message
             if ! echo "$api_response" | grep -q '"message"'; then
+                # Try multiple parsing methods for compatibility
                 latest_tag=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+                # Fallback: try simpler pattern
+                if [ -z "$latest_tag" ]; then
+                    latest_tag=$(echo "$api_response" | grep -o '"tag_name":"[^"]*"' | cut -d'"' -f4)
+                fi
             fi
         fi
     fi
